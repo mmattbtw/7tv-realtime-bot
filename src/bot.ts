@@ -66,6 +66,11 @@ type banphraseResponse = {
   } | null;
 };
 
+const banphraseUrls = {
+  weest: "https://bot.weest.tv/api/v1/banphrases/test",
+  mmattbtw: "https://mmattbot.com/api/v1/banphrases/test",
+};
+
 let client = new ChatClient({
   username: "emoteupdatebot",
   password: `${process.env.IRC_PASSWORD}`,
@@ -81,10 +86,29 @@ client.on("close", (error) => {
   }
 });
 
+async function sendMessage(message: string, channel: string) {
+  if (channel === "weest" || channel === "mmattbtw") {
+    const banphraseResponse: banphraseResponse = await axios.post(
+      banphraseUrls[channel],
+      { message }
+    );
+
+    if (!banphraseResponse.banned) {
+      client.say(channel, message);
+    } else {
+      return;
+    }
+  } else {
+    client.say(channel, message);
+    return;
+  }
+}
+
 import EventSource from "eventsource";
 
+// dont hard code this
 const source = new EventSource(
-  "https://events.7tv.app/v1/channel-emotes?channel=weest"
+  "https://events.7tv.app/v1/channel-emotes?channel=weest&channel=mmattbtw"
 );
 
 source.addEventListener("ready", (e) => {
@@ -98,64 +122,30 @@ source.addEventListener("update", async (e) => {
 
   switch (data.action) {
     case "ADD": {
-      const message = `[NEW 7TV EMOTE]: ${data.actor} added ${data.name} `;
-
-      const banphraseResponse: banphraseResponse = await axios.post(
-        "https://bot.weest.tv/api/v1/banphrases/test",
-        { message }
+      await sendMessage(
+        `[NEW 7TV EMOTE]: ${data.actor} added ${data.name} `,
+        data.channel
       );
-
-      if (!banphraseResponse.banned) {
-        client.say(data.channel, message);
-      } else {
-        return;
-      }
       return;
     }
 
     case "REMOVE": {
-      const message = `[7TV EMOTE REMOVED]: ${data.actor} removed ${data.name} `;
-
-      const banphraseResponse: banphraseResponse = await axios.post(
-        "https://bot.weest.tv/api/v1/banphrases/test",
-        { message }
+      await sendMessage(
+        `[7TV EMOTE REMOVED]: ${data.actor} removed ${data.name} `,
+        data.channel
       );
-
-      if (!banphraseResponse.banned) {
-        client.say(data.channel, message);
-      } else {
-        return;
-      }
       return;
     }
 
     case "UPDATE": {
-      const message = `[7TV EMOTE UPDATED]: ${data.actor} aliased ${data.emote?.name} to ${data.name}`;
-
-      const banphraseResponse: banphraseResponse = await axios.post(
-        "https://bot.weest.tv/api/v1/banphrases/test",
-        { message }
+      await sendMessage(
+        `[7TV EMOTE UPDATED]: ${data.actor} aliased ${data.emote?.name} to ${data.name}`,
+        data.channel
       );
-
-      if (!banphraseResponse.banned) {
-        client.say(data.channel, message);
-      } else {
-        return;
-      }
-
       return;
     }
   }
 });
-
-// {
-// 	"channel": "weest",
-// 	"emote_id": "60ba797c744a3bc82c61dd56",
-// 	"name": "test",
-// 	"action": "REMOVE",
-// 	"actor": "mmattbtw",
-// 	"emote": null
-// }
 
 source.addEventListener("open", (e) => {
   // Connection was opened.
@@ -163,4 +153,5 @@ source.addEventListener("open", (e) => {
 });
 
 client.connect();
-client.join("weest");
+// dont hardcode this
+client.joinAll(["weest", "mmattbtw"]);
