@@ -53,17 +53,19 @@ interface ExtraEmoteData {
 }
 
 type banphraseResponse = {
-  banned: boolean;
-  input_message: string;
-  banphrase_data: {
-    id: number;
-    name: string;
-    phrase: string;
-    length: number;
-    permanent: boolean;
-    operator: string;
-    case_sensitive: boolean;
-  } | null;
+  data: {
+    banned: boolean;
+    input_message: string;
+    banphrase_data: {
+      id: number;
+      name: string;
+      phrase: string;
+      length: number;
+      permanent: boolean;
+      operator: string;
+      case_sensitive: boolean;
+    } | null;
+  };
 };
 
 const banphraseUrls = {
@@ -93,7 +95,7 @@ async function sendMessage(message: string, channel: string) {
       { message }
     );
 
-    if (!banphraseResponse.banned) {
+    if (!banphraseResponse.data.banned) {
       client.say(channel, message);
     } else {
       return;
